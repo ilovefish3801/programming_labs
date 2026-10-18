@@ -74,7 +74,7 @@ def main():
     root.print_tree()
 
     longest_path = root.get_longest_path()
-    print(f"\nРезультат: {longest_path}")
+    print(f"\nНайдовший шлях: \n{longest_path}")
 
 if __name__ == "__main__":
     main()
