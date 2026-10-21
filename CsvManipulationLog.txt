@@ -1,2 +1,0 @@
-Started append function
-Finished append function
