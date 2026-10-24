@@ -1,8 +1,7 @@
 import os
-from functools import wraps
 from enum import Enum
 import logging
-import time
+from datetime import datetime
 
 LOGGER_NAME = "CsvManipulationLogger"
 
@@ -15,38 +14,43 @@ class FileCorrupted(Exception):
         self.message = message
         super().__init__(message)
 
+class FileNotFound(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(message)
+
 class CsvManipulator:
     def __init__(self,
                  path: str,
                  name: str):
-        if not os.path.exists(path):
-            raise FileNotFoundError
+        full_path = os.path.join(path, name)
+        if not os.path.exists(full_path):
+            raise FileNotFound("file not found")
         
         
         self.__path = path
         self.__name = name
-        self.__fullPath = os.path.join(path, name)
+        self.__fullPath = full_path
     
     def logging(exception, mode):
         def decorator(func):
-            
-            @wraps(func)
             def wrapper(*args, **kwargs):
+                if mode is LoggingTypes.CONSOLE:
+                    handler = logging.StreamHandler()
+                elif mode is LoggingTypes.FILE:
+                    handler = logging.FileHandler(f"CsvManipulationLog.txt", encoding="utf-8")
+                else:
+                    raise ValueError("you have to enter a valid logging mode")
+                
+                logger = logging.getLogger(LOGGER_NAME)
+
                 try:
-                    if mode is LoggingTypes.CONSOLE:
-                        handler = logging.StreamHandler()
-                    elif mode is LoggingTypes.FILE:
-                        handler = logging.FileHandler(f"CsvManipulationLog.txt", encoding="utf-8")
-                    else:
-                        raise ValueError("you have to enter a valid logging mode")
-                    
-                    logger = logging.getLogger(LOGGER_NAME)
                     if not logger.handlers:
                         logger.handlers.append(handler)
                     
-                    logger.info(f"Started {func.__name__} function")
+                    logger.info(f"[{datetime.now()}] Started {func.__name__} function")
                     result = func(*args, **kwargs)
-                    logger.info(f"Finished {func.__name__} function")
+                    logger.info(f"[{datetime.now()}] Finished {func.__name__} function")
                     
                     return result
                 except exception as error:
@@ -58,7 +62,7 @@ class CsvManipulator:
             return wrapper
         return decorator
 
-    @logging(PermissionError, LoggingTypes.CONSOLE)
+    @logging(FileCorrupted, LoggingTypes.CONSOLE)
     def read(self):
         try:
             with open(self.__fullPath, "r") as f:
@@ -68,7 +72,7 @@ class CsvManipulator:
         except OSError as error:
             raise FileCorrupted(error)
     
-    @logging(PermissionError, LoggingTypes.FILE)
+    @logging(FileCorrupted, LoggingTypes.FILE)
     def write(self, data):
         try:
             with open(self.__fullPath, "w") as f:
@@ -77,7 +81,7 @@ class CsvManipulator:
         except OSError as error:
             raise FileCorrupted(error)
     
-    @logging(PermissionError, LoggingTypes.FILE)
+    @logging(FileCorrupted, LoggingTypes.FILE)
     def append(self, data):
         try:
             with open(self.__fullPath, "a") as f:
@@ -92,9 +96,12 @@ def main():
     logger.info("Logger starter")
     logger.setLevel("INFO")
     
-    csv_manipulator = CsvManipulator("C:\\Users\\kyryl\\Downloads\\lab6_test", "test_file.csv")
-    csv_manipulator.append("data3,data4")
-    print(csv_manipulator.read())
+    try:
+        csv_manipulator = CsvManipulator("G:\\students_merch-shop-main\\github\\programming_labs", "test_file.csv")
+        csv_manipulator.append("data3,data4")
+        print(csv_manipulator.read())
+    except Exception as e:
+        print(e)
     
     logger.info("Logger ended")
 
